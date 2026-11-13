@@ -1,0 +1,54 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+enum Segment {
+    B2G
+    B2B
+}
+
+enum VisitStatus {
+    NOT_VISITED
+    VISITED
+}
+
+model User {
+    id           String   @id @default(cuid())
+    name         String
+    email        String   @unique
+    passwordHash String
+    createdAt    DateTime @default(now())
+}
+
+model Entity {
+    id         String     @id @default(cuid())
+    name       String
+    type       String
+    segment    Segment
+    region     String
+    isMaster   Boolean    @default(true)
+    createdAt  DateTime   @default(now())
+    activities Activity[]
+
+    @@index([segment, isMaster])
+}
+
+model Activity {
+    id        String      @id @default(cuid())
+    entityId  String
+    entity    Entity      @relation(fields: [entityId], references: [id])
+    salesName String
+    segment   Segment
+    visitDate DateTime
+    status    VisitStatus @default(NOT_VISITED)
+    createdAt DateTime    @default(now())
+    updatedAt DateTime    @updatedAt
+
+    @@index([visitDate])
+    @@index([entityId])
+}
