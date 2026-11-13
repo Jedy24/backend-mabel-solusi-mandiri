@@ -116,6 +116,32 @@ describe('activities', () => {
     });
 });
 
+describe('sales catalog', () => {
+    it('requires authentication and returns case-insensitive matches', async () => {
+        await client.get('/api/sales').expect(401);
+        const response = await authorized('get', '/api/sales')
+            .query({ search: 'nADia' })
+            .expect(200);
+        expect(response.body.data).toEqual([{ id: expect.any(String), name: 'Nadia Putri' }]);
+    });
+
+    it('uses the catalog name for new visits and rejects an unknown sales ID', async () => {
+        const catalog = await authorized('get', '/api/sales').expect(200);
+        const salesperson = catalog.body.data.find(({ name }) => name === 'Andi Pratama');
+        const { entityId, segment, visitDate } = validVisit;
+        const payload = { entityId, segment, visitDate, salesId: salesperson.id };
+        const created = await authorized('post', '/api/activities').send(payload).expect(201);
+        expect(created.body.data).toMatchObject({
+            salesId: salesperson.id,
+            salesName: salesperson.name
+        });
+        const invalid = await authorized('post', '/api/activities')
+            .send({ ...payload, salesId: 'unknown' })
+            .expect(400);
+        expect(invalid.body.errors.salesId).toBeDefined();
+    });
+});
+
 describe('entities', () => {
     it('filters master entities by segment and search, keeping distinct IDs and types', async () => {
         const response = await authorized('get', '/api/entities')

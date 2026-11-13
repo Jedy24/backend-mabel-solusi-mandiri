@@ -25,7 +25,7 @@ async function getActivities({ segment, status, from, to, search }) {
     return activities.map(formatActivity);
 }
 
-async function createActivity({ entityId, salesName, segment, visitDate }) {
+async function createActivity({ entityId, salesId, salesName, segment, visitDate }) {
     const entity = await prisma.entity.findUnique({
         where: { id: entityId },
         select: { segment: true }
@@ -39,8 +39,21 @@ async function createActivity({ entityId, salesName, segment, visitDate }) {
         return { field: 'entityId', message: 'Select an entity in the chosen segment' };
     }
 
+    const salesperson = salesId
+        ? await prisma.salesperson.findUnique({ where: { id: salesId } })
+        : null;
+    if (salesId && !salesperson) {
+        return { field: 'salesId', message: 'The selected salesperson does not exist' };
+    }
+
     const activity = await prisma.activity.create({
-        data: { entityId, salesName, segment, visitDate: new Date(visitDate) },
+        data: {
+            entityId,
+            salesId,
+            salesName: salesperson?.name ?? salesName,
+            segment,
+            visitDate: new Date(visitDate)
+        },
         include: { entity: true }
     });
     return { activity: formatActivity(activity) };

@@ -46,7 +46,18 @@ async function seed() {
             });
         }
 
+        const salespeople = [];
+        for (const name of salesNames) {
+            const salesperson = await tx.salesperson.upsert({
+                where: { name },
+                update: {},
+                create: { name }
+            });
+            salespeople.push(salesperson);
+        }
+
         for (let index = 0; index < 26; index += 1) {
+            const salesperson = salespeople[index % salespeople.length];
             const entityIndex = index % entities.length;
             const id = 'visit-' + String(index + 1).padStart(3, '0');
             await tx.activity.upsert({
@@ -56,7 +67,8 @@ async function seed() {
                     id,
                     entityId: 'ent-' + String(entityIndex + 1).padStart(3, '0'),
                     segment: entities[entityIndex][2],
-                    salesName: salesNames[index % salesNames.length],
+                    salesId: salesperson.id,
+                    salesName: salesperson.name,
                     visitDate: new Date(Date.UTC(2026, 2, index + 1)),
                     status: index % 3 === 1 ? 'NOT_VISITED' : 'VISITED'
                 }
@@ -64,7 +76,7 @@ async function seed() {
         }
     });
 
-    console.log('Demo account, entity catalog, and sample visits are ready.');
+    console.log('Demo account, entity and sales catalogs, and sample visits are ready.');
 }
 
 seed()

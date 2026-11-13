@@ -14,7 +14,9 @@ function isCalendarDate(value) {
 
 function textField(field, message, max) {
     return body(field)
+        .if((value, { req }) => field !== 'salesName' || req.body?.salesId === undefined)
         .isString()
+        .withMessage(message)
         .bail()
         .trim()
         .isLength({ min: 1, max })
@@ -22,15 +24,17 @@ function textField(field, message, max) {
         .hide();
 }
 
+const searchQuery = query('search')
+    .optional()
+    .isString()
+    .bail()
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('Search can contain up to 120 characters');
+
 const entityQuery = [
     query('segment').optional().isString().bail().isIn(segments).withMessage('Select B2G or B2B'),
-    query('search')
-        .optional()
-        .isString()
-        .bail()
-        .trim()
-        .isLength({ max: 120 })
-        .withMessage('Search can contain up to 120 characters')
+    searchQuery
 ];
 
 const activityQuery = [
@@ -55,6 +59,7 @@ const createActivity = [
     textField('entityId', 'Select an entity', 100),
     body('segment').isString().bail().isIn(segments).withMessage('Select B2G or B2B'),
     body('visitDate').custom(isCalendarDate).withMessage('Enter a valid visit date'),
+    textField('salesId', 'Select a salesperson', 100).optional(),
     textField('salesName', 'Enter a sales name of up to 100 characters', 100)
 ];
 
@@ -63,4 +68,4 @@ const updateStatus = [
     body('status').isString().bail().isIn(statuses).withMessage('Select a valid visit status')
 ];
 
-module.exports = { activityQuery, createActivity, entityQuery, updateStatus };
+module.exports = { activityQuery, createActivity, entityQuery, searchQuery, updateStatus };

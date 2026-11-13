@@ -1,54 +1,63 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "sqlite"
-    url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 enum Segment {
-    B2G
-    B2B
+  B2G
+  B2B
 }
 
 enum VisitStatus {
-    NOT_VISITED
-    VISITED
+  NOT_VISITED
+  VISITED
 }
 
 model User {
-    id           String   @id @default(cuid())
-    name         String
-    email        String   @unique
-    passwordHash String
-    createdAt    DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
 }
 
 model Entity {
-    id         String     @id @default(cuid())
-    name       String
-    type       String
-    segment    Segment
-    region     String
-    isMaster   Boolean    @default(true)
-    createdAt  DateTime   @default(now())
-    activities Activity[]
+  id         String     @id @default(cuid())
+  name       String
+  type       String
+  segment    Segment
+  region     String
+  isMaster   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  activities Activity[]
 
-    @@index([segment, isMaster])
+  @@index([segment, isMaster])
+}
+
+model Salesperson {
+  id         String     @id @default(cuid())
+  name       String     @unique
+  activities Activity[]
 }
 
 model Activity {
-    id        String      @id @default(cuid())
-    entityId  String
-    entity    Entity      @relation(fields: [entityId], references: [id])
-    salesName String
-    segment   Segment
-    visitDate DateTime
-    status    VisitStatus @default(NOT_VISITED)
-    createdAt DateTime    @default(now())
-    updatedAt DateTime    @updatedAt
+  id        String       @id @default(cuid())
+  entityId  String
+  entity    Entity       @relation(fields: [entityId], references: [id])
+  salesName String
+  salesId   String?
+  sales     Salesperson? @relation(fields: [salesId], references: [id], onDelete: SetNull)
+  segment   Segment
+  visitDate DateTime
+  status    VisitStatus  @default(NOT_VISITED)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-    @@index([visitDate])
-    @@index([entityId])
+  @@index([visitDate])
+  @@index([entityId])
+  @@index([salesId])
 }

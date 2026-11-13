@@ -20,7 +20,7 @@ npm run db:seed
 npm run dev
 ```
 
-`db:setup` applies committed migrations and generates the Prisma client. The seeder creates one demo account, 13 fictional entities, and 26 visits. Rerunning it preserves existing rows and creates any missing seed rows. Use `npm start` to run the server without watch mode.
+`db:setup` applies committed migrations and generates the Prisma client. The seeder creates one demo account, 13 fictional entities, four demo salespeople, and 26 visits. Rerunning it preserves existing rows and creates any missing seed rows. Use `npm start` to run the server without watch mode.
 
 | Variable       | Local value                                                        |
 | -------------- | ------------------------------------------------------------------ |
@@ -37,16 +37,17 @@ The frontend is a separate repository. Set its `VITE_API_URL` to `http://localho
 
 Every route except login requires an `Authorization: Bearer <token>` header. Tokens expire after eight hours.
 
-| Method and route            | Input and result                                                                                                                 |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/auth/login`      | Email and password. Returns a token and public user fields.                                                                      |
-| `GET /api/auth/me`          | Returns the signed-in user.                                                                                                      |
-| `GET /api/activities`       | Optional `search`, `segment`, `status`, `from`, and `to`. Includes entity details and sorts by visit date, newest first.         |
-| `POST /api/activities`      | Requires `entityId`, `segment`, `visitDate`, and `salesName`. Returns 201 and creates the visit as `NOT_VISITED`.                |
-| `PATCH /api/activities/:id` | Accepts `VISITED` or `NOT_VISITED` in `status`. Returns the saved activity.                                                      |
-| `GET /api/entities`         | Optional `segment` and `search`. Returns matching master choices or unique matching history choices if the master list is empty. |
+| Method and route            | Input and result                                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/auth/login`      | Email and password. Returns a token and public user fields.                                                                                                    |
+| `GET /api/auth/me`          | Returns the signed-in user.                                                                                                                                    |
+| `GET /api/activities`       | Optional `search`, `segment`, `status`, `from`, and `to`. Includes entity details and sorts by visit date, newest first.                                       |
+| `POST /api/activities`      | Requires `entityId`, `segment`, `visitDate`, and `salesId`. Legacy callers can supply `salesName` instead. Returns 201 and creates the visit as `NOT_VISITED`. |
+| `PATCH /api/activities/:id` | Accepts `VISITED` or `NOT_VISITED` in `status`. Returns the saved activity.                                                                                    |
+| `GET /api/sales`            | Lists salespeople by name. Accepts an optional `search` parameter.                                                                                             |
+| `GET /api/entities`         | Optional `segment` and `search`. Returns matching master choices or unique matching history choices if the master list is empty.                               |
 
-Dates use `YYYY-MM-DD` with inclusive boundaries. Segments are `B2G` and `B2B`. Search uses SQLite's case-insensitive matching for ASCII names. The sales-name field implements the PDF's optional bonus and is required by the project brief.
+Dates use `YYYY-MM-DD` with inclusive boundaries. Segments are `B2G` and `B2B`. Search uses SQLite's case-insensitive matching for ASCII names. New visits in the dashboard link to a salesperson and keep their display name on the visit. The migration links existing visits to a catalog entry using their recorded sales name.
 
 Examples in PowerShell:
 
@@ -60,7 +61,8 @@ Invoke-RestMethod "$base/auth/me" -Headers $headers
 Invoke-RestMethod "$base/activities?segment=B2G&status=VISITED&from=2026-03-01&to=2026-03-31&search=melati" -Headers $headers
 Invoke-RestMethod "$base/entities?segment=B2G&search=cemara" -Headers $headers
 
-$visit = @{ entityId = 'ent-001'; segment = 'B2G'; visitDate = '2026-03-15'; salesName = 'Andi Pratama' } | ConvertTo-Json
+$sales = Invoke-RestMethod "$base/sales?search=andi" -Headers $headers
+$visit = @{ entityId = 'ent-001'; segment = 'B2G'; visitDate = '2026-03-15'; salesId = $sales.data[0].id } | ConvertTo-Json
 $created = Invoke-RestMethod "$base/activities" -Method Post -Headers $headers -ContentType 'application/json' -Body $visit
 Invoke-RestMethod "$base/activities/$($created.data.id)" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"status":"VISITED"}'
 ```
@@ -89,4 +91,4 @@ The demo uses one shared account and one visit list. It has no registration, tok
 
 ## AI Usage Disclosure
 
-Estimated AI assistance is approximately **100% of this repository's implementation during the recorded session**. Codex authored the Express handlers and middleware, Prisma schema and seed, filtering and fallback, test suite, configuration, and documentation from the supplied requirements. Codex reviewed the implementation and ran the API tests. Candidate manual review and test verification are unrecorded for this session.
+Codex assisted with most of the initial implementation, including the Express routes, authentication, Prisma schema, seed data, filtering, and API tests. The project author defined the requirements and requested a database-backed sales catalog. Codex implemented the sales endpoint, visit validation, migration, and related tests. Verification included ESLint, 28 API tests, and a migration check that preserved the recorded sales names on 26 existing visits. A project-wide percentage was not measured.
