@@ -10,7 +10,8 @@ router.get('/', searchQuery, validateRequest, async (req, res) => {
     const { search } = matchedData(req);
     const name = search ? { contains: search.replace(/[\\%_]/g, '\\$&') } : undefined;
     const salespeople = await prisma.salesperson.findMany({
-        where: { name },
+        where: { name, isActive: true },
+        select: { id: true, name: true },
         orderBy: { name: 'asc' }
     });
 

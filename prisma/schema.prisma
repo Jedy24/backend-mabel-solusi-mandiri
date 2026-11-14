@@ -17,10 +17,16 @@ enum VisitStatus {
   VISITED
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
+  role         Role     @default(USER)
   passwordHash String
   createdAt    DateTime @default(now())
 }
@@ -32,6 +38,7 @@ model Entity {
   segment    Segment
   region     String
   isMaster   Boolean    @default(true)
+  isActive   Boolean    @default(true)
   createdAt  DateTime   @default(now())
   activities Activity[]
 
@@ -41,6 +48,7 @@ model Entity {
 model Salesperson {
   id         String     @id @default(cuid())
   name       String     @unique
+  isActive   Boolean    @default(true)
   activities Activity[]
 }
 
@@ -60,4 +68,19 @@ model Activity {
   @@index([visitDate])
   @@index([entityId])
   @@index([salesId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorEmail String
+  actorRole  Role
+  action     String
+  targetType String
+  targetId   String
+  changes    String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt, id])
+  @@index([actorId])
 }

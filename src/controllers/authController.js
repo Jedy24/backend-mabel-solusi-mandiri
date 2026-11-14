@@ -2,8 +2,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { matchedData } = require('express-validator');
 const prisma = require('../config/database');
+const { recordAudit } = require('../services/auditService');
 
-const userFields = { id: true, name: true, email: true };
+const userFields = {
+    id: true,
+    name: true,
+    email: true,
+    role: true
+};
 const fallbackHash = bcrypt.hashSync('unused-password-for-missing-users', 12);
 
 async function login(req, res) {
@@ -21,34 +27,28 @@ async function login(req, res) {
         });
     }
 
-    const { id, name } = user;
+    const { id, name, role } = user;
+    const publicUser = { id, name, email: user.email, role };
     const token = jwt.sign({}, process.env.JWT_SECRET, {
         algorithm: 'HS256',
         subject: id,
         expiresIn: '8h'
     });
 
+    await recordAudit(prisma, publicUser, 'LOGIN', 'User', id);
+
     return res.json({
         success: true,
         message: 'Login successful',
-        data: { token, user: { id, name, email } }
+        data: { token, user: publicUser }
     });
 }
 
-async function getCurrentUser(req, res) {
-    const user = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: userFields
+function getCurrentUser(req, res) {
+    return res.json({
+        success: true,
+        data: req.user
     });
-
-    if (!user) {
-        return res.status(401).json({
-            success: false,
-            message: 'Your account is no longer available'
-        });
-    }
-
-    return res.json({ success: true, data: user });
 }
 
 module.exports = { login, getCurrentUser };

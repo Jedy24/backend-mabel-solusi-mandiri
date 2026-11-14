@@ -6,6 +6,8 @@ const entityRoutes = require('./routes/entityRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const authenticate = require('./middleware/authMiddleware');
 const errorMiddleware = require('./middleware/errorMiddleware');
+const adminRoutes = require('./routes/adminRoutes');
+const requireAdmin = require('./middleware/requireAdmin');
 
 const app = express();
 
@@ -16,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/activities', authenticate, activityRoutes);
 app.use('/api/entities', authenticate, entityRoutes);
 app.use('/api/sales', authenticate, salesRoutes);
+app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 app.use((req, res) => {
     res.status(404).json({
         success: false,

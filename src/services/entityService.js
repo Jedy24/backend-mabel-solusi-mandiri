@@ -8,7 +8,7 @@ function entityFilters({ segment, search }) {
 }
 
 async function getEntities(filters) {
-    const where = entityFilters(filters);
+    const where = { ...entityFilters(filters), isActive: true };
     const select = { id: true, name: true, type: true, segment: true, region: true };
     const orderBy = [{ name: 'asc' }, { type: 'asc' }, { id: 'asc' }];
 

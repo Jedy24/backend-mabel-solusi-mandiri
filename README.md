@@ -33,6 +33,22 @@ If Prisma reports an empty schema engine error on Windows and the shell sets RUS
 
 The frontend is a separate repository. Set its `VITE_API_URL` to `http://localhost:3001/api`, then follow its README. The seeded login is **demo@visitflow.test** / **Demo12345!**.
 
+## Try an admin account
+
+The seed account has role USER. To try ADMIN, create a separate local account after applying migrations. Run these commands from the backend repository in PowerShell 7.
+
+```powershell
+$env:BOOTSTRAP_ADMIN_EMAIL = 'admin@visitflow.test'
+$env:BOOTSTRAP_ADMIN_PASSWORD = Read-Host 'Choose an admin password' -MaskInput
+try {
+    node prisma/bootstrapAdmin.js
+} finally {
+    Remove-Item Env:BOOTSTRAP_ADMIN_EMAIL, Env:BOOTSTRAP_ADMIN_PASSWORD
+}
+```
+
+Use at least 12 characters and at most 72 UTF-8 bytes. On other shells, set the same two variables for the bootstrap command. Sign in with that email and password, then open **Admin**. Admins can also use the regular visit dashboard. Regular users can plan and update visits with the shared catalog.
+
 ## API
 
 Every route except login requires an `Authorization: Bearer <token>` header. Tokens expire after eight hours.
@@ -46,6 +62,17 @@ Every route except login requires an `Authorization: Bearer <token>` header. Tok
 | `PATCH /api/activities/:id` | Accepts `VISITED` or `NOT_VISITED` in `status`. Returns the saved activity.                                                                                    |
 | `GET /api/sales`            | Lists salespeople by name. Accepts an optional `search` parameter.                                                                                             |
 | `GET /api/entities`         | Optional `segment` and `search`. Returns matching master choices or unique matching history choices if the master list is empty.                               |
+
+All endpoints under `/api/admin` require role ADMIN. Requests without valid authentication receive 401. Authenticated users with role USER receive 403.
+
+| Admin route               | Available operations                                                          |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `/api/admin/users`        | GET to list accounts. POST to create an ADMIN or USER.                        |
+| `/api/admin/entities`     | GET to list and POST to create. PATCH or DELETE at `/:id` to edit or archive. |
+| `/api/admin/sales`        | GET to list and POST to create. PATCH or DELETE at `/:id` to edit or archive. |
+| `/api/admin/audit?page=1` | GET to list recent audit entries in pages of 25.                              |
+
+Archived entities and salespeople disappear from new visit choices while existing visits retain their references and sales-name history. In the Admin UI, edit an archived item and enable **Active** to restore it. The audit log records successful sign-ins, account creation, catalog changes, and visit creation or status changes. Entries record the actor, time, target, and change details where applicable.
 
 Dates use `YYYY-MM-DD` with inclusive boundaries. Segments are `B2G` and `B2B`. Search uses SQLite's case-insensitive matching for ASCII names. New visits in the dashboard link to a salesperson and keep their display name on the visit. The migration links existing visits to a catalog entry using their recorded sales name.
 
@@ -83,12 +110,15 @@ npm test
 npm run lint
 ```
 
-The test setup migrates and seeds a fresh SQLite database under an ignored temporary directory in `prisma/`. The suite removes that directory on teardown. The tests cover authentication, filters, date boundaries, creation, validation, status persistence, and entity fallback.
+The test setup migrates and seeds a fresh SQLite database under an ignored temporary directory in `prisma/`. API test files each use a copy of that seeded database. The tests cover authentication, role enforcement, account creation, catalog archive and restore, audit attribution, filters, date boundaries, and visit persistence.
 
 ## Known limitations
 
-The demo uses one shared account and one visit list. It has no registration, token revocation, pagination, or master-data editor. SQLite uses a local file and the search case folding is limited to ASCII. The demo credentials are public by design and are for local evaluation.
+The demo uses a shared visit list. It has no public registration, token revocation, or visit pagination. The audit screen covers application events from the time the feature is enabled. SQLite uses a local file and the search case folding is limited to ASCII. The demo credentials are public by design and are for local evaluation.
 
 ## AI Usage Disclosure
 
-Codex assisted with most of the initial implementation, including the Express routes, authentication, Prisma schema, seed data, filtering, and API tests. The project author defined the requirements and requested a database-backed sales catalog. Codex implemented the sales endpoint, visit validation, migration, and related tests. Verification included ESLint, 28 API tests, and a migration check that preserved the recorded sales names on 26 existing visits. A project-wide percentage was not measured.
+- **Project author** supplied the requirements, requested the database-backed sales catalog, and applied the RBAC and audit changes from the Visit Flow guide, including the Prisma migration and admin bootstrap setup.
+- **Codex** assisted with the initial Express and Prisma implementation, the sales catalog, and the guide's RBAC and audit code. Codex added automated coverage for role checks, the admin API, catalog history, and audit attribution.
+
+This disclosure describes the work by feature. A project-wide percentage was not measured.

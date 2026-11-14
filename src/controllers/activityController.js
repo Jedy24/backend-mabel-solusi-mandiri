@@ -10,7 +10,7 @@ async function getActivities(req, res) {
 }
 
 async function createActivity(req, res) {
-    const result = await activityService.createActivity(matchedData(req));
+    const result = await activityService.createActivity(matchedData(req), req.user);
     if (result.field) {
         return res.status(400).json({
             success: false,
@@ -28,7 +28,7 @@ async function createActivity(req, res) {
 
 async function updateStatus(req, res) {
     const { id, status } = matchedData(req);
-    const activity = await activityService.updateStatus(id, status);
+    const activity = await activityService.updateStatus(id, status, req.user);
     if (!activity) {
         return res.status(404).json({
             success: false,

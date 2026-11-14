@@ -7,7 +7,8 @@ it('logs in and returns the current user without their password hash', async () 
     expect(login.body.data.user).toEqual({
         id: 'user-001',
         name: 'Demo User',
-        email: demo.email
+        email: demo.email,
+        role: 'USER'
     });
 
     const me = await client
